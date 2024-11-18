@@ -14,7 +14,9 @@ Antes de instalar cualquier programa en Linux, siempre es recomendable actualiza
 
 Para ello primero tendrémos que instalarlo mediante el comando `sudo apt-get install bind9 bind9utils bind9-doc` dentro la MV. Ahora modificaremos el archivo general de configuración `sudo nano /etc/default/named` y pondremos el valor `OPTIONS` que solo use IPv4 de esta forma:
 `OPTIONS = "-u bind -4"`.
-![alt text](/img/image.png)</br>
+
+![alt text](/img/image.png)
+
 Y guardaremos los cambios.
 
 Ahora modificaremos el archivo `named.conf.options` utilizando el comando `sudo nano /etc/bind/named.conf.options` y pondremos `dnssec-validation <valor>;` en *yes* para activar la validación de DNS en .
