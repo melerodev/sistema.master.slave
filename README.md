@@ -1,8 +1,9 @@
 # sistema.master.slave
 <hr style="color: white; border-radius: 5px;">
-Dentro del directorio `.vagrant` crearemos un `Vagrantfile` en que el crearemos dos MV:
+Dentro del directorio `.vagrant` crearemos un `Vagrantfile` en que el crearemos tres MV:
 -   Máquina maestro: `tierra.sistema.test` (Debian texto, IP: `192.168.57.103`).
 -   Máquina esclavo: `venus.sistema.test` (Debian texto, IP: `192.168.57.102`).
+-   Dominio de correo: `marte.sistema.test` (Windows server)
 
 No se deberá tener bajo control de versiones el directorio `.vagrant` ni los **ficheros de backup**.
 
@@ -14,9 +15,7 @@ Antes de instalar cualquier programa en Linux, siempre es recomendable actualiza
 
 Para ello primero tendrémos que instalarlo mediante el comando `sudo apt-get install bind9 bind9utils bind9-doc` dentro la MV. Ahora modificaremos el archivo general de configuración `sudo nano /etc/default/named` y pondremos el valor `OPTIONS` que solo use IPv4 de esta forma:
 `OPTIONS = "-u bind -4"`.
-
-![alt text](/img/image.png)
-
+![alt text](/img/image.png)</br>
 Y guardaremos los cambios.
 
 Ahora modificaremos el archivo `named.conf.options` utilizando el comando `sudo nano /etc/bind/named.conf.options` y pondremos `dnssec-validation <valor>;` en *yes* para activar la validación de DNS en .
@@ -48,9 +47,10 @@ options {
         // Uncomment the following block, and insert the addresses replacing
         // the all-0's placeholder.
 
-        // forwarders {
-        //      0.0.0.0;
-        // };
+        // Reenviáremos las consultas que reciba el servidor para la que no está autorizado, deberá reenviarlas
+        forwarders {
+            208.67.222.222; // OpenDNS
+        };
 
         //========================================================================
         // If BIND logs error messages about the root key being expired,
@@ -59,6 +59,8 @@ options {
         dnssec-validation yes;
 
         listen-on-v6 { any; };
+        // Tiempo en caché de respuestas negativas (2 horas)
+        max-ncache-ttl 7200;
 };
 ```
 
@@ -70,7 +72,7 @@ Si todo ha salido bien nos tendrá que devolver algo así:
 
 ![alt text](/img/image1.png)
 
-Ahora lo que haremos será poner la MV de `tierra` como maestro con el nombre `tierra.sistema.test` y tendrá autoridad sobre la zona directa e inversa. Para ello uilizaremos el comando abriremos el archivo de configuración local de Bind9 con el comando `sudo nano /etc/bind/named.conf.local` y lo dejaremos de la siguiente forma: 
+Ahora lo que haremos será poner la MV de `tierra` como maestro con el nombre `tierra.sistema.test` y tendrá autoridad sobre la zona directa e inversa. Para ello uilizaremos el siguiente comando abriendo el archivo de configuración local de Bind9 con el comando `sudo nano /etc/bind/named.conf.local` y lo dejaremos de la siguiente forma: 
 ```
 // Zona directa
 zone "sistema.test" {
@@ -101,12 +103,14 @@ $TTL    604800
 ;
 @       IN      NS      tierra.sistema.test.
 @       IN      NS      venus.sistema.test.
+@       IN      MX      10 marte.sistema.test.
 tierra  IN      A       192.168.57.103
 venus   IN      A       192.168.57.102
 marte   IN      A       192.168.57.104
 mail    IN      CNAME   marte
 ns1     IN      CNAME   tierra
 ns2     IN      CNAME   venus
+mail    IN      CNAME   marte.sistema.test.
 ```
 
 Ahora crearemos el archivo de zona inversa con los comandos:
@@ -148,3 +152,29 @@ OK
 Ahora lo que haremos será reiniciar Bind9 y comprobar su estado.
 `sudo systemctl restart bind9`
 `sudo systemctl status bind9`
+
+Después de configurar `tierra.sistema.test` como master y tener autoridad sobre la zona directa e inversa, lo que haremos será poner a la MV `venus.sistema.test` como esclavo y como maestro de este `tierra.sistema.test`.
+
+Empezaremos conectándonos a la MV mediante el comando `vagrant ssh venus` y después instalaremos Bind9. Tras instalar Bind9 modificaremos el archivo de la configuración local con el comando `sudo nano /etc/bind/named.conf.local` y dentro de este pondremos el siguiente contenido:
+```
+// Zona directa
+zone "sistema.test" {
+    type master;
+    file "/etc/bind/db.sistema.test";
+    allow-transfer { 192.168.57.102; };  // Permitir transferencias al esclavo
+};
+
+// Zona inversa
+zone "57.168.192.in-addr.arpa" {
+    type master;
+    file "/etc/bind/db.192.168.57";
+    allow-transfer { 192.168.57.102; };  // Permitir transferencias al esclavo
+};
+```
+
+Ahora reiniciaremos el servicio Bind9 y comprobaremos su estado con los comandos:
+`sudo systemctl restart bind9`
+`sudo systemctl status bind9`
+
+Deberíasmos de recibir una respuesta de este estílo, significará que todo está bien:
+![alt text](img/image2.png)
