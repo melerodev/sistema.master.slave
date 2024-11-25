@@ -72,12 +72,14 @@ Ahora lo que haremos será poner la MV de `tierra` como maestro con el nombre `t
 zone "sistema.test" {
     type master;                        // Es el servidor maestro
     file "/etc/bind/db.sistema.test";   // Archivo de configuración de la zona directa
+    allow-transfer { 192.168.57.102; }; 
 };
 
 // Zona inversa
 zone "57.168.192.in-addr.arpa" {
     type master;                        // Es el servidor maestro
     file "/etc/bind/db.192.168.57";     // Archivo de configuración de la zona inversa
+    allow-transfer { 192.168.57.102; }; 
 };
 ```
 
