@@ -30,37 +30,31 @@ acl "redes_permitidas" {
 
 El archivo nos quedaría tal que así:
 ```
-acl "redes_permitidas" {
-    127.0.0.0/8;        // Loopback (localhost)
-    192.168.57.0/24;    // Red local específica
+acl "internal" {
+    127.0.0.0/8;       # Permitir consultas desde localhost
+    192.168.57.0/24;   # Permitir consultas desde la red interna
 };
 
 options {
-        directory "/var/cache/bind";
+    directory "/var/cache/bind";
 
-        // If there is a firewall between you and nameservers you want
-        // to talk to, you may need to fix the firewall to allow multiple
-        // ports to talk.  See http://www.kb.cert.org/vuls/id/800113
+    // Escuchar solo en la red IPv4
+    listen-on { 192.168.57.103; };  # IP del maestro (tierra)
+    listen-on-v6 { none; };         # Desactivar IPv6 completamente
 
-        // If your ISP provided one or more IP addresses for stable
-        // nameservers, you probably want to use them as forwarders.
-        // Uncomment the following block, and insert the addresses replacing
-        // the all-0's placeholder.
+    // Permitir consultas recursivas solo desde las redes definidas en la acl
+    allow-query { "internal"; };
+    recursion yes;
 
-        // Reenviáremos las consultas que reciba el servidor para la que no está autorizado, deberá reenviarlas
-        forwarders {
-            208.67.222.222; // OpenDNS
-        };
+    // Validación DNSSEC activada
+    dnssec-validation yes;
 
-        //========================================================================
-        // If BIND logs error messages about the root key being expired,
-        // you will need to update your keys.  See https://www.isc.org/bind-keys
-        //========================================================================
-        dnssec-validation yes;
+    // NXDOMAIN no autoritativo
+    auth-nxdomain no;
 
-        listen-on-v6 { any; };
-        // Tiempo en caché de respuestas negativas (2 horas)
-        max-ncache-ttl 7200;
+    // Otras opciones predeterminadas
+    forwarders { 208.67.222.222; };   # OpenDNS
+    forward only;   # Reenvía solo a los servidores especificados
 };
 ```
 
@@ -94,23 +88,30 @@ Ahora lo que haremos será crear el archivo de zona directa con los comandos:
 Y dentro de este pondremos el siguiente bloque de código:
 ```
 $TTL    604800
-@       IN      SOA     tierra.sistema.test. admin.sistema.test. (
-                          2024111801 ; Serial
-                          604800     ; Refresh
-                          86400      ; Retry
-                          2419200    ; Expire
-                          604800 )   ; Negative Cache TTL
-;
+@       IN      SOA     tierra.sistema.test. root.sistema.test. (
+                              3         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+
+; Servidores de nombres
 @       IN      NS      tierra.sistema.test.
-@       IN      NS      venus.sistema.test.
-@       IN      MX      10 marte.sistema.test.
+
+; Registros A para los hosts
 tierra  IN      A       192.168.57.103
 venus   IN      A       192.168.57.102
 marte   IN      A       192.168.57.104
-mail    IN      CNAME   marte
-ns1     IN      CNAME   tierra
-ns2     IN      CNAME   venus
-mail    IN      CNAME   marte.sistema.test.
+
+; Alias para los servidores
+ns1     IN  CNAME   tierra.sistema.test.
+ns2     IN  CNAME   venus.sistema.test.
+
+; Alias para el servidor de correo
+mail    IN  CNAME   marte.sistema.test.
+
+; Registro MX para el dominio sistema.test
+@       IN  MX  10   marte.sistema.test.
 ```
 
 Ahora crearemos el archivo de zona inversa con los comandos:
@@ -120,15 +121,17 @@ Ahora crearemos el archivo de zona inversa con los comandos:
 Y dentro de este pondremos el contenido:
 ```
 $TTL    604800
-@       IN      SOA     tierra.sistema.test. admin.sistema.test. (
-                          2024111801 ; Serial
-                          604800     ; Refresh
-                          86400      ; Retry
-                          2419200    ; Expire
-                          604800 )   ; Negative Cache TTL
-;
+@       IN      SOA     tierra.sistema.test. root.sistema.test. (
+                              3         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+
+; Servidores de nombres
 @       IN      NS      tierra.sistema.test.
-@       IN      NS      venus.sistema.test.
+
+; Registros PTR (para resolución inversa)
 103     IN      PTR     tierra.sistema.test.
 102     IN      PTR     venus.sistema.test.
 104     IN      PTR     marte.sistema.test.
@@ -155,20 +158,54 @@ Ahora lo que haremos será reiniciar Bind9 y comprobar su estado.
 
 Después de configurar `tierra.sistema.test` como master y tener autoridad sobre la zona directa e inversa, lo que haremos será poner a la MV `venus.sistema.test` como esclavo y como maestro de este `tierra.sistema.test`.
 
-Empezaremos conectándonos a la MV mediante el comando `vagrant ssh venus` y después instalaremos Bind9. Tras instalar Bind9 modificaremos el archivo de la configuración local con el comando `sudo nano /etc/bind/named.conf.local` y dentro de este pondremos el siguiente contenido:
+Empezaremos conectándonos a la MV mediante el comando `vagrant ssh venus` y después instalaremos Bind9. Tras instalar Bind9 modificaremos el archivo de la configuración `named.conf.options` Ahora modificaremos el archivo `named.conf.options` con el comando `sudo nano /etc/bind/named.conf.options` y dentro de este pondremos el siguiente contenido:
+```
+acl "internal" {
+    127.0.0.0/8;       # Permitir consultas desde localhost
+    192.168.57.0/24;   # Permitir consultas desde la red interna
+};
+
+options {
+    directory "/var/cache/bind";
+
+    // Escuchar solo en la red IPv4
+    listen-on { 192.168.57.102; };  # IP del esclavo (venus)
+    listen-on-v6 { none; };         # Desactivar IPv6 completamente
+
+    // Permitir consultas recursivas solo desde las redes definidas en la acl
+    allow-query { "internal"; };
+    recursion yes;
+
+    // Validación DNSSEC activada
+    dnssec-validation yes;
+
+    // NXDOMAIN no autoritativo
+    auth-nxdomain no;
+
+    // Otras opciones predeterminadas
+    forwarders { 208.67.222.222; };   # OpenDNS
+    forward only;   # Reenvía solo a los servidores especificados
+    
+    // Cache negativa 7200s (2 horas)
+    max-ncache-ttl 7200;
+};
+```
+
+Después modificaremos el archivo de configuración local con el comando `sudo nano /etc/bind/named.conf.local` y dentro de este pondremos el siguiente contenido:
+
 ```
 // Zona directa
 zone "sistema.test" {
-    type master;
-    file "/etc/bind/db.sistema.test";
-    allow-transfer { 192.168.57.102; };  // Permitir transferencias al esclavo
+    type slave;
+    file "/var/lib/bind/db.sistema.test";
+    masters { 192.168.57.103; };  # IP del servidor maestro (tierra)
 };
 
 // Zona inversa
 zone "57.168.192.in-addr.arpa" {
-    type master;
-    file "/etc/bind/db.192.168.57";
-    allow-transfer { 192.168.57.102; };  // Permitir transferencias al esclavo
+    type slave;
+    file "/var/lib/bind/db.192.168.57";
+    masters { 192.168.57.103; };  # IP del servidor maestro
 };
 ```
 
@@ -177,4 +214,49 @@ Ahora reiniciaremos el servicio Bind9 y comprobaremos su estado con los comandos
 `sudo systemctl status bind9`
 
 Deberíasmos de recibir una respuesta de este estílo, significará que todo está bien:
-![alt text](img/image2.png)
+![alt text](img/image1.png)
+
+
+Ahora procederemos a hacer las siguientes comprobaciones.
+
+- Puedes resolver los registros tipo `A`.
+    - Desde el servidor tierra:
+    `dig @192.168.57.103 tierra.sistema.test`
+    ![alt text](img/image2.png)
+    `dig @192.168.57.103 venus.sistema.test`
+    ![alt text](img/image3.png)
+
+    - Desde el servidor venus:
+    `dig @192.168.57.103 tierra.sistema.test`
+    ![alt text](img/image4.png)
+    `dig @192.168.57.103 venus.sistema.test`
+    ![alt text](img/image5.png)
+
+- Comprueba que se pueden resolver de forma inversa sus direcciones IP.
+    - Desde el servidor tierra:
+    `dig @192.168.57.103 -x 192.168.57.103`
+    ![alt text](img/image6.png)
+    `dig @192.168.57.103 -x 192.168.57.102`
+    ![alt text](img/image7.png)
+
+    - Desde el servidor venus:
+    `dig @192.168.57.103 -x 192.168.57.103`
+    ![alt text](img/image8.png)
+    `dig @192.168.57.103 -x 192.168.57.102`
+    ![alt text](img/image9.png)
+
+- Puedes resolver los alias `ns1.sistema.test` y `ns2.sistema.test`.
+    - Desde el servidor tierra:
+    `dig @192.168.57.103 ns1.sistema.test`
+    ![alt text](img/image10.png)
+    ` dig @192.168.57.103 ns2.sistema.test`
+    ![alt text](img/image7.png)
+
+    - Desde el servidor venus:
+    `dig @192.168.57.103 -x 192.168.57.103`
+    ![alt text](img/image8.png)
+    `dig @192.168.57.103 -x 192.168.57.102`
+    ![alt text](img/image9.png)
+
+- Realiza la consulta para saber los servidores `NS` de `sistema.test`. Debes obtener `tierra.sistema.test` y `venus.sistema.test`.
+- Realiza la consulta para saber los servidores `MX` de `sistema.test`.

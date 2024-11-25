@@ -11,11 +11,11 @@ Vagrant.configure("2") do |config|
     tierra.vm.provision "shell", inline: <<-SHELL
       sudo apt-get update
       sudo apt-get install bind9 -y
-      cp -v /vagrant/named /etc/default/named
-      cp -v /vagrant/named.conf.options /etc/bind/named.conf.options
-      cp -v /vagrant/named.conf.local /etc/bind/named.conf.local
-      cp -v /vagrant/db.sistema.test /etc/bind/db.sistema.test
-      cp -v /vagrant/db.192.168.57 /etc/bind/db.192.168.57
+      cp -v /vagrant/config/tierra/named /etc/default/named
+      cp -v /vagrant/config/tierra/named.conf.options /etc/bind/named.conf.options
+      cp -v /vagrant/config/tierra/named.conf.local /etc/bind/named.conf.local
+      cp -v /vagrant/config/tierra/db.sistema.test /etc/bind/db.sistema.test
+      cp -v /vagrant/config/tierra/db.192.168.57 /etc/bind/db.192.168.57
       systemctl restart named
       systemctl status named
     SHELL
@@ -31,6 +31,11 @@ Vagrant.configure("2") do |config|
     venus.vm.provision "shell", inline: <<-SHELL
       sudo apt-get update
       sudo apt-get install bind9 -y
+      cp -v /vagrant/config/venus/named /etc/default/named
+      cp -v /vagrant/config/venus/named.conf.options
+      cp -v /vagrant/config/venus/named.conf.local
+      cp -v /vagrant/config/venus/db.192.168.57 /etc/bind/db.192.168.57
     SHELL
   end
 end
+
