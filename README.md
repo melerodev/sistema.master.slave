@@ -239,7 +239,7 @@ Ahora procederemos a hacer las siguientes comprobaciones.
 - Realiza la consulta para saber los servidores `MX` de `sistema.test`.
     - Desde el servidor tierra:
     `dig @192.168.57.103 MX sistema.test`
-    ![alt text](image16.png)
+    ![alt text](img/image16.png)
 
     - Desde el servidor venus:
     `dig @192.168.57.102 MX sistema.test`
