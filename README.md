@@ -158,40 +158,7 @@ Ahora lo que haremos será reiniciar Bind9 y comprobar su estado.
 
 Después de configurar `tierra.sistema.test` como master y tener autoridad sobre la zona directa e inversa, lo que haremos será poner a la MV `venus.sistema.test` como esclavo y como maestro de este `tierra.sistema.test`.
 
-Empezaremos conectándonos a la MV mediante el comando `vagrant ssh venus` y después instalaremos Bind9. Tras instalar Bind9 modificaremos el archivo de la configuración `named.conf.options` Ahora modificaremos el archivo `named.conf.options` con el comando `sudo nano /etc/bind/named.conf.options` y dentro de este pondremos el siguiente contenido:
-```
-acl "internal" {
-    127.0.0.0/8;       # Permitir consultas desde localhost
-    192.168.57.0/24;   # Permitir consultas desde la red interna
-};
-
-options {
-    directory "/var/cache/bind";
-
-    // Escuchar solo en la red IPv4
-    listen-on { 192.168.57.102; };  # IP del esclavo (venus)
-    listen-on-v6 { none; };         # Desactivar IPv6 completamente
-
-    // Permitir consultas recursivas solo desde las redes definidas en la acl
-    allow-query { "internal"; };
-    recursion yes;
-
-    // Validación DNSSEC activada
-    dnssec-validation yes;
-
-    // NXDOMAIN no autoritativo
-    auth-nxdomain no;
-
-    // Otras opciones predeterminadas
-    forwarders { 208.67.222.222; };   # OpenDNS
-    forward only;   # Reenvía solo a los servidores especificados
-    
-    // Cache negativa 7200s (2 horas)
-    max-ncache-ttl 7200;
-};
-```
-
-Después modificaremos el archivo de configuración local con el comando `sudo nano /etc/bind/named.conf.local` y dentro de este pondremos el siguiente contenido:
+Empezaremos conectándonos a la MV mediante el comando `vagrant ssh venus` y después instalaremos Bind9. Tras instalar Bind9 modificaremos el archivo de configuración local con el comando `sudo nano /etc/bind/named.conf.local` y dentro de este pondremos el siguiente contenido:
 
 ```
 // Zona directa
@@ -208,6 +175,8 @@ zone "57.168.192.in-addr.arpa" {
     masters { 192.168.57.103; };  # IP del servidor maestro
 };
 ```
+
+**El resto de configuraciones son las mismas en la máquina maestro**.
 
 Ahora reiniciaremos el servicio Bind9 y comprobaremos su estado con los comandos:
 `sudo systemctl restart bind9`
@@ -259,4 +228,19 @@ Ahora procederemos a hacer las siguientes comprobaciones.
     ![alt text](img/image13.png)
 
 - Realiza la consulta para saber los servidores `NS` de `sistema.test`. Debes obtener `tierra.sistema.test` y `venus.sistema.test`.
+    - Desde el servidor tierra:
+    `dig @192.168.57.103 ns.sistema.test`
+    ![alt text](img/image14.png)
+
+    - Desde el servidor venus:
+    `dig @192.168.57.102 ns.sistema.test`
+    ![alt text](img/image15.png)
+
 - Realiza la consulta para saber los servidores `MX` de `sistema.test`.
+    - Desde el servidor tierra:
+    `dig @192.168.57.103 MX sistema.test`
+    ![alt text](image16.png)
+
+    - Desde el servidor venus:
+    `dig @192.168.57.102 MX sistema.test`
+    ![alt text](img/image17.png)
