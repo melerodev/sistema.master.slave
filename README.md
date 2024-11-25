@@ -227,9 +227,9 @@ Ahora procederemos a hacer las siguientes comprobaciones.
     ![alt text](img/image3.png)
 
     - Desde el servidor venus:
-    `dig @192.168.57.103 tierra.sistema.test`
+    `dig @192.168.57.102 tierra.sistema.test`
     ![alt text](img/image4.png)
-    `dig @192.168.57.103 venus.sistema.test`
+    `dig @192.168.57.102 venus.sistema.test`
     ![alt text](img/image5.png)
 
 - Comprueba que se pueden resolver de forma inversa sus direcciones IP.
@@ -240,23 +240,23 @@ Ahora procederemos a hacer las siguientes comprobaciones.
     ![alt text](img/image7.png)
 
     - Desde el servidor venus:
-    `dig @192.168.57.103 -x 192.168.57.103`
+    `dig @192.168.57.102 -x 192.168.57.103`
     ![alt text](img/image8.png)
-    `dig @192.168.57.103 -x 192.168.57.102`
+    `dig @192.168.57.102 -x 192.168.57.102`
     ![alt text](img/image9.png)
 
 - Puedes resolver los alias `ns1.sistema.test` y `ns2.sistema.test`.
     - Desde el servidor tierra:
     `dig @192.168.57.103 ns1.sistema.test`
     ![alt text](img/image10.png)
-    ` dig @192.168.57.103 ns2.sistema.test`
-    ![alt text](img/image7.png)
+    `dig @192.168.57.103 ns2.sistema.test`
+    ![alt text](img/image11.png)
 
     - Desde el servidor venus:
-    `dig @192.168.57.103 -x 192.168.57.103`
-    ![alt text](img/image8.png)
-    `dig @192.168.57.103 -x 192.168.57.102`
-    ![alt text](img/image9.png)
+    `dig @192.168.57.102 ns1.sistema.test`
+    ![alt text](img/image12.png)
+    `dig @192.168.57.102 ns2.sistema.test`
+    ![alt text](img/image13.png)
 
 - Realiza la consulta para saber los servidores `NS` de `sistema.test`. Debes obtener `tierra.sistema.test` y `venus.sistema.test`.
 - Realiza la consulta para saber los servidores `MX` de `sistema.test`.

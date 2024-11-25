@@ -1,0 +1,25 @@
+$TTL    604800
+@       IN      SOA     tierra.sistema.test. root.sistema.test. (
+                              3         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+
+; Servidores de nombres
+@       IN      NS      tierra.sistema.test.
+
+; Registros A para los hosts
+tierra  IN      A       192.168.57.103
+venus   IN      A       192.168.57.102
+marte   IN      A       192.168.57.104
+
+; Alias para los servidores
+ns1     IN  CNAME   tierra.sistema.test.
+ns2     IN  CNAME   venus.sistema.test.
+
+; Alias para el servidor de correo
+mail    IN  CNAME   marte.sistema.test.
+
+; Registro MX para el dominio sistema.test
+@       IN  MX  10   marte.sistema.test.

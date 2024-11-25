@@ -32,8 +32,9 @@ Vagrant.configure("2") do |config|
       sudo apt-get update
       sudo apt-get install bind9 -y
       cp -v /vagrant/config/venus/named /etc/default/named
-      cp -v /vagrant/config/venus/named.conf.options
-      cp -v /vagrant/config/venus/named.conf.local
+      cp -v /vagrant/config/venus/named.conf.options /etc/bind/named.conf.options
+      cp -v /vagrant/config/venus/named.conf.local /etc/bind/named.conf.local
+      cp -v /vagrant/config/venus/db.sistema.test /etc/bind/db.sistema.test
       cp -v /vagrant/config/venus/db.192.168.57 /etc/bind/db.192.168.57
     SHELL
   end
