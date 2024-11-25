@@ -244,3 +244,13 @@ Ahora procederemos a hacer las siguientes comprobaciones.
     - Desde el servidor venus:
     `dig @192.168.57.102 MX sistema.test`
     ![alt text](img/image17.png)
+
+- Comprueba que se ha realizado la transferencia de la zona entre el servidor DNS maestro y el esclavo. Revisa los logs o realiza una consulta del registro AXFR.
+
+    - Desde una máquina externa que no sea la esclava, probaremos que las trasferencias no son posibles con el comando:
+    `nslookup -type=AXFR sistema.test 192.168.57.103`
+    ![alt text](img/image18.png)
+    
+    - Ahora haremos lo mismo solo que desde la máquina que tiene el servidor DNS maestro, comprobaremos que las trasferencias son posibles con el comando:
+    `dig @192.168.57.103 sistema.test axfr`
+    ![alt text](img/image19.png)
